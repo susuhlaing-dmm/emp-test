@@ -1,0 +1,25 @@
+
+  get:
+    description: This API is used to retrieve all employee                      
+    responses: 
+      200:
+        description: Transfer done  
+        body: 
+          application/json:
+            example : {
+              status : "SUCCESS",
+              data : [
+                {  
+                  name : "Zaw Than Oo",
+                  email : "zawthanoo@gmail.com",
+                  phone : "+959420000777",
+                  dob : "1986-12-02"
+                },
+                 {  
+                  name : "Aung Aung",
+                  email : "aungaung@gmail.com",
+                  phone : "+959421100777",
+                  dob : "1986-11-14"
+                }
+              ]
+            }

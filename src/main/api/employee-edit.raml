@@ -1,0 +1,31 @@
+
+  post:
+    description: This API is used to edit an employeeinfo
+    body: 
+      application/json:       
+        properties:
+          id:
+            description: Employee ID 
+            type: integer
+            required: true  
+          name:
+            description: Employee Name 
+            type: string
+            required: true  
+          dob:
+            description: date of birth of employee
+            type: string
+            required: false 
+          phone:
+            description: mobile phone number. e.g. ooredoo or telenor or mpt 
+            type: string
+            required: true 
+          email:
+            description: contact email of employee 
+            type: string
+            required: true                      
+    responses: 
+      200:
+        description: Transfer done  
+        body: 
+          application/json:

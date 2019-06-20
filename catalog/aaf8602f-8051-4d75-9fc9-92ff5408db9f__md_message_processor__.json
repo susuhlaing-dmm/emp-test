@@ -1,0 +1,18 @@
+{
+    "inputMessageMetadata": {
+        "flowVariables": {
+            "employeeArray": {
+                "connectorName": "#_custom_mule_metadata_type_#",
+                "typeId": "List"
+            }
+        }
+    },
+    "outputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "List"
+        }
+    },
+    "id": "aaf8602f-8051-4d75-9fc9-92ff5408db9f",
+    "version": "5.2.0.0"
+}

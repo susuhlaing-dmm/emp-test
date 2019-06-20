@@ -1,0 +1,388 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:mulexml="http://www.mulesoft.org/schema/mule/xml" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/current/mule-xml.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd">
+    <apikit:config name="application-config" raml="application-config.raml" consoleEnabled="false" consolePath="console" keepRamlBaseUri="false" doc:name="Router"/>
+    <vm:connector name="VM" validateConnections="true" doc:name="VM">
+        <vm:queue-profile>
+            <file-queue-store/>
+        </vm:queue-profile>
+    </vm:connector>
+    <flow name="employee-interface">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/employee/*" doc:name="HTTP"/>
+        <apikit:router config-ref="application-config" doc:name="APIkit Router"/>
+    </flow>
+    <flow name="get:/test:application-config">
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	status : "SUCCESS"
+}
+
+]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="get:/list:application-config">
+        <db:select config-ref="MySQL_Configuration" doc:name="Database">
+            <db:parameterized-query><![CDATA[select * from employee;]]></db:parameterized-query>
+        </db:select>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	status : "SUCCESS",
+	data : payload map ((payload01, indexOfPayload01) -> {	
+		name : payload01.NAME,
+		email : payload01.EMAIL,
+		phone : payload01.PHONE,
+		dob : payload01.DOB	as :string {format: "yyyy-MM-dd"}
+	})
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="get:/list-foreach:application-config" doc:description="[
+    {
+        &quot;id&quot;: 1,
+        &quot;phone&quot;: &quot;9790000&quot;
+    },
+    {
+        &quot;id&quot;: 3,
+        &quot;phone&quot;: &quot;9123445&quot;
+    }
+]">
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload]]></dw:set-payload>
+        </dw:transform-message>
+        <foreach doc:name="For Each">
+            <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+            <enricher   doc:name="Message Enricher">
+                <db:select config-ref="MySQL_Configuration" doc:name="Database">
+                    <db:parameterized-query><![CDATA[select name,email from employee where id=#[payload.id]]]></db:parameterized-query>
+                </db:select>
+                <enrich source="#[payload[0].name]" target="#[flowVars.name]"/>
+                <enrich source="#[payload[0].email]" target="#[flowVars.email]"/>
+            </enricher>
+            <logger message="#[flowVars.name], #[flowVars.counter]" level="INFO" doc:name="Logger"/>
+            <expression-component doc:name="Expression"><![CDATA[payload.name=flowVars.name;
+payload.email=flowVars.email;]]></expression-component>
+        </foreach>
+        <object-to-string-transformer doc:name="Object to String"/>
+        <set-payload value="#[payload]" doc:name="Set Payload"/>
+        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+    </flow>
+    <flow name="get:/json/{id}:application-config">
+        <db:select config-ref="MySQL_Configuration" doc:name="Database">
+            <db:parameterized-query><![CDATA[SELECT * FROM EMPLOYEE WHERE ID = #[message.inboundProperties.'http.uri.params'.id];]]></db:parameterized-query>
+        </db:select>
+        <dw:transform-message doc:name="Transform Message" metadata:id="155ba85a-02e1-4286-b311-04930ae06dd0">
+            <dw:input-variable mimeType="application/java" variableName="id"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+%var empdb = payload[0]
+---
+{
+	status : "SUCCESS",
+	data : {	
+		name : empdb.NAME,
+		email : empdb.EMAIL,
+		phone : empdb.PHONE,
+		dob : empdb.DOB as :string {format: "yyyy-MM-dd"}
+	}
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="get:/xml/{id}:application-config">
+        <db:select config-ref="MySQL_Configuration" doc:name="Database">
+            <db:parameterized-query><![CDATA[SELECT * FROM EMPLOYEE WHERE id = #[message.inboundProperties.'http.uri.params'.id];]]></db:parameterized-query>
+        </db:select>
+        <dw:transform-message doc:name="Transform Message" metadata:id="4634facf-3244-4bda-8b35-a9f43d9ad341">
+            <dw:input-variable mimeType="application/java" variableName="id"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+%var empdb = payload[0]
+---
+result: {
+	status : "SUCCESS",
+	data : {	
+		name : empdb.NAME,
+		email : empdb.EMAIL,
+		phone : empdb.PHONE,
+		dob : empdb.DOB as :string {format: "yyyy-MM-dd"}
+	}
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="get:/list-xml:application-config">
+        <db:select config-ref="MySQL_Configuration" doc:name="Database">
+            <db:parameterized-query><![CDATA[select * from employee;]]></db:parameterized-query>
+        </db:select>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+%type cusdate = :string {format: "yyyy-MM-dd"}
+---
+
+result: {
+	status: "SUCCESS",
+	(payload map {	
+	employee : {
+		name: $.NAME,
+		email: $.EMAIL,
+		phone: $.phone,
+		dob: $.DOB	as :cusdate
+	}
+	}) 
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="Transactional">
+        <db:insert config-ref="MySQL_Configuration" doc:name="Database">
+            <db:parameterized-query><![CDATA[INSERT INTO EMPLOYEE (NAME, DOB, PHONE, EMAIL) 
+VALUES (#[flowVars.createReq.name], #[flowVars.createReq.dob], #[flowVars.createReq.phone], #[flowVars.createReq.email]);]]></db:parameterized-query>
+        </db:insert>
+        <logger level="INFO" doc:name="Logger" message="successfully inserted."/>
+    </flow>
+    <flow name="post:/create:application-config">
+        <json:json-to-object-transformer doc:name="JSON to Object"/>
+
+        <dw:transform-message doc:name="Transform Message" metadata:id="e788967f-e0fa-4fa3-b1d1-a3fd5b85e012">
+            <dw:input-payload/>
+            <dw:set-variable variableName="createReq"><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	name: payload.name,
+	dob: payload.dob as :date {format: "yyyy-MM-dd"},
+	phone: payload.phone,
+	email: payload.email
+}]]></dw:set-variable>
+
+        </dw:transform-message>
+
+        <flow-ref name="Transactional" doc:name="Transactional"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="82852c49-c82e-4675-95bf-1992093162b9">
+            <dw:input-payload mimeType="application/java"/>
+            <dw:input-variable mimeType="application/java" variableName="createReq"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	status: "SUCCESS"
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="post:/create-validation:application-config">
+        <json:json-to-object-transformer doc:name="JSON to Object"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="09cd3ad3-4b50-4aaa-b48c-d3e9d07fe5ab">
+            <dw:input-payload doc:sample="sample_data\string.dwl" mimeType="application/json"/>
+            <dw:set-variable variableName="createReq"><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	name: payload.name,
+	dob: payload.dob,
+	phone: payload.phone,
+	email: payload.email
+}]]></dw:set-variable>
+        </dw:transform-message>
+        <flow-ref name="Transactional" doc:name="Flow Reference"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	status: "SUCCESS"
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="post:/create-bylist:application-config" doc:description="[
+    {
+        &quot;name&quot;: &quot;June&quot;,
+        &quot;dob&quot;: &quot;1945-11-11&quot;,
+        &quot;phone&quot;: &quot;09182736&quot;,
+        &quot;email&quot;: &quot;June@gmail.com&quot;
+    },
+    {
+       &quot;name&quot;: &quot;Mod&quot;,
+        &quot;dob&quot;: &quot;1966-09-09&quot;,
+        &quot;phone&quot;: &quot;093252783&quot;,
+        &quot;email&quot;: &quot;mod@gmail.com&quot;
+    },
+    {
+        &quot;name&quot;: &quot;Ei&quot;,
+        &quot;dob&quot;: &quot;1966-01-23&quot;,
+        &quot;phone&quot;: &quot;092763734&quot;,
+        &quot;email&quot;: &quot;ei@gmail.com&quot;
+    }
+]">
+        <json:json-to-object-transformer  doc:name="JSON to Object" returnClass="java.util.List"/>
+        <foreach collection="#[message.payload]" doc:name="For Each">
+            <db:insert config-ref="MySQL_Configuration" doc:name="Database" >
+                <db:parameterized-query><![CDATA[INSERT INTO EMPLOYEE (NAME, DOB, PHONE, EMAIL) 
+VALUES (#[message.payload.name], #[message.payload.dob], #[message.payload.phone], #[message.payload.email]);]]></db:parameterized-query>
+
+            </db:insert>
+        </foreach>
+        <set-payload value="Inserted" doc:name="Set Payload" doc:description="[
+    {
+        &quot;name&quot;: &quot;June&quot;,
+        &quot;dob&quot;: &quot;1945-11-11&quot;,
+        &quot;phone&quot;: &quot;09182736&quot;,
+        &quot;email&quot;: &quot;June@gmail.com&quot;
+    },
+    {
+       &quot;name&quot;: &quot;Mod&quot;,
+        &quot;dob&quot;: &quot;1966-09-09&quot;,
+        &quot;phone&quot;: &quot;093252783&quot;,
+        &quot;email&quot;: &quot;mod@gmail.com&quot;
+    },
+    {
+        &quot;name&quot;: &quot;Ei&quot;,
+        &quot;dob&quot;: &quot;1966-01-23&quot;,
+        &quot;phone&quot;: &quot;092763734&quot;,
+        &quot;email&quot;: &quot;ei@gmail.com&quot;
+    }
+]"/>
+
+    </flow>
+    <flow name="post:/create-bylist-foreach:application-config" doc:description="{
+    &quot;employee&quot;: [
+        {
+            &quot;name&quot;: &quot;June&quot;,
+            &quot;dob&quot;: &quot;1945-11-11&quot;,
+            &quot;phone&quot;: &quot;09182736&quot;,
+            &quot;email&quot;: &quot;June@gmail.com&quot;
+        },
+        {
+            &quot;name&quot;: &quot;Mod&quot;,
+            &quot;dob&quot;: &quot;1966-09-09&quot;,
+            &quot;phone&quot;: &quot;093252783&quot;,
+            &quot;email&quot;: &quot;mod@gmail.com&quot;
+        },
+        {
+            &quot;name&quot;: &quot;Ei&quot;,
+            &quot;dob&quot;: &quot;1966-01-23&quot;,
+            &quot;phone&quot;: &quot;092763734&quot;,
+            &quot;email&quot;: &quot;ei@gmail.com&quot;
+        }
+    ]
+}">
+        <json:json-to-object-transformer doc:name="JSON to Object"/>
+        <set-variable variableName="employeeArray" value="#[json:employee]" doc:name="Variable"/>
+        <logger message="flow var---&gt;#[flowVars.employeeArray]" level="INFO" doc:name="Logger"/>
+        <foreach collection="#[flowVars.employeeArray]" doc:name="For Each">
+            <logger message="for each payload---&gt;#[payload]&lt;----" level="INFO" doc:name="Logger"/>
+            <expression-component doc:name="Expression"><![CDATA[#[payload]]]></expression-component>
+            <dw:transform-message doc:name="Transform Message" metadata:id="1034a932-5aa6-42f2-9bdc-c6ce858efbaa">
+                <dw:input-payload mimeType="application/json"/>
+                <dw:input-variable variableName="employeeArray"/>
+                <dw:set-variable variableName="createReq"><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	name: payload.name,
+	dob: payload.dob as :date {format: "yyyy-MM-dd"} ,
+	phone: payload.phone,
+	email: payload.email
+}
+]]></dw:set-variable>
+            </dw:transform-message>
+            <logger message="after tm===&gt;#[flowVars.createReq.name],#[flowVars.createReq.dob],#[flowVars.createReq.phone],#[flowVars.createReq.email]" level="INFO" doc:name="Logger"/>
+            <db:insert config-ref="MySQL_Configuration" doc:name="Database">
+                <db:parameterized-query><![CDATA[INSERT INTO EMPLOYEE (NAME, DOB, PHONE, EMAIL) 
+VALUES (#[flowVars.createReq.name], #[flowVars.createReq.dob], #[flowVars.createReq.phone], #[flowVars.createReq.email]);]]></db:parameterized-query>
+            </db:insert>
+        </foreach>
+        <set-payload value="successfully inserted" doc:name="Set Payload"/>
+    </flow>
+    <flow name="Transactional_edit">
+        <db:update config-ref="MySQL_Configuration" doc:name="Database">
+            <db:parameterized-query><![CDATA[UPDATE EMPLOYEE 
+ SET NAME = #[flowVars.createReq.name], 
+ DOB = #[flowVars.createReq.dob], 
+ phone = #[flowVars.createReq.phone], 
+ EMAIL = #[flowVars.createReq.email]
+ WHERE id = #[flowVars.createReq.id];]]></db:parameterized-query>
+        </db:update>
+        <logger message="update success" level="INFO" doc:name="Logger"/>
+    </flow>
+    <flow name="post:/edit:application-config">
+        <json:json-to-object-transformer doc:name="JSON to Object"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-variable variableName="createReq"><![CDATA[%dw 1.0
+%output application/java
+---
+{
+   id: payload.id,
+   name: payload.name,
+   dob: payload.dob as :date {format: "yyyy-MM-dd"},
+   phone: payload.phone,
+   email: payload.email
+}
+]]></dw:set-variable>
+        </dw:transform-message>
+        <flow-ref name="Transactional_edit" doc:name="Transactional_edit"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	status: "SUCCESS"
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <flow name="Transactional_create_xml">
+        <db:insert config-ref="MySQL_Configuration" doc:name="Database">
+            <db:parameterized-query><![CDATA[INSERT INTO EMPLOYEE (NAME, DOB, phone, EMAIL) 
+VALUES (#[flowVars.createReq.name], #[flowVars.createReq.dob],  #[flowVars.createReq.phone], #[flowVars.createReq.email]);]]></db:parameterized-query>
+        </db:insert>
+        <logger message="create success!!!!" level="INFO" doc:name="Logger"/>
+    </flow>
+    <flow name="post:/create-xml:application-config">
+        <mulexml:xml-to-object-transformer doc:name="XML to Object"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-variable variableName="createReq"><![CDATA[%dw 1.0
+%output application/java
+---
+{
+   name: payload.name,
+   dob: payload.dob as :date {format: "yyyy-MM-dd"},
+   phone: payload.phone,
+   email: payload.email
+}
+]]></dw:set-variable>
+        </dw:transform-message>
+        <flow-ref name="Transactional_create_xml" doc:name="Transactional_create_xml"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	status: "success"
+}]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+
+
+</mule>

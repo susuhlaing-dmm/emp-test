@@ -1,0 +1,20 @@
+#%RAML 1.0
+title: Application Demo API
+version: 0.1
+
+mediaType: application/json
+description: testing for mule, it is a tutorial project.
+
+
+/test: !include test.raml
+/list: !include employee-list.raml
+/list-xml: !include employee-list-xml.raml
+/json/{id}: !include employee-byID.raml
+/xml/{id}: !include employee-byID-xml.raml
+/create: !include employee-create.raml
+/edit: !include employee-edit.raml
+/create-xml: !include employee-create-xml.raml
+/create-validation: !include employee-create-validation.raml
+/create-bylist: !include employee-create-list.raml
+/create-bylist-foreach: !include employee-create-list.raml
+/list-foreach: !include test.raml

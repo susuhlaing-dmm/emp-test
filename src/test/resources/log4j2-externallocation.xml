@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+ <Configuration status="WARN">
+     <Appenders>
+         <Console name="ConsoleAppender" target="SYSTEM_OUT">
+             <PatternLayout pattern="%-5p %d [%t] %c: %m%n"/>
+         </Console>
+         
+          <!-- Async Loggers will auto-flush in batches, so switch off immediateFlush. -->
+         <RollingRandomAccessFile  name="Mule_APP_FileAppender" fileName="${sys:mule.home}/logs/Mule_APP.log" immediateFlush="false" append="true" 
+             filePattern="${sys:mule.home}/logs/history/Mule_APP-%d{dd-MMM-yyyy}-%i.log">
+             <PatternLayout>
+                 <Pattern>%-5p %d [%t] %c: %m%n</Pattern>                
+             </PatternLayout>
+             
+             <Policies>
+                 <TimeBasedTriggeringPolicy/>
+                 <SizeBasedTriggeringPolicy size="10 MB"/>                
+             </Policies>      
+             <DefaultRolloverStrategy min="1" max="5"/>
+         </RollingRandomAccessFile >    
+     </Appenders>
+  
+     <Loggers>
+  
+         <AsyncRoot level="${sys:Mule_APP_LOG_LEVEL}">
+             <AppenderRef ref="ConsoleAppender"/>
+             <AppenderRef ref="Mule_APP_FileAppender"/>
+         </AsyncRoot>        
+     
+     </Loggers>
+  
+ </Configuration>

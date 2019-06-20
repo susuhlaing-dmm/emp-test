@@ -1,0 +1,27 @@
+
+  post:
+    description: This API is used to create a new employee
+    body: 
+      application/json:       
+        properties:
+          name:
+            description: Employee Name 
+            type: string
+            required: true  
+          dob:
+            description: date of birth of employee
+            type: string
+            required: false          
+          phone:
+            description: mobile phone number. e.g. ooredoo or telenor or mpt 
+            type: string
+            required: false 
+          email:
+            description: contact email of employee 
+            type: string
+            required: true                      
+    responses: 
+      200:
+        description: Transfer done  
+        body: 
+          application/json:
