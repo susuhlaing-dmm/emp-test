@@ -23,6 +23,7 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
             <file-queue-store/>
         </vm:queue-profile>
     </vm:connector>
+    <db:mysql-config name="MySQL_Configuration_Fail" host="localhost" port="9999" user="root" password="root" database="mule-testing-1" doc:name="MySQL Configuration"/>
     <flow name="employee-interface">
         <http:listener config-ref="HTTP_Listener_Configuration" path="/employee/*" doc:name="HTTP"/>
         <apikit:router config-ref="application-config" doc:name="APIkit Router"/>
@@ -38,6 +39,23 @@ http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/cu
 
 ]]></dw:set-payload>
         </dw:transform-message>
+    </flow>
+    <flow name="get:/first-successful-router:application-config">
+        <first-successful doc:name="First Successful" failureExpression="exception-type:java.sql.SQLException">
+            <processor-chain>
+                <db:select config-ref="MySQL_Configuration_Fail" doc:name="Database fail">
+                    <db:parameterized-query><![CDATA[select * from employee;]]></db:parameterized-query>
+                </db:select>
+                <logger message="Processed by first message Processor" level="INFO" doc:name="Logger"/>
+            </processor-chain>
+            <processor-chain>
+                <db:select config-ref="MySQL_Configuration"  doc:name="Database Success">
+                    <db:parameterized-query><![CDATA[select * from employee;]]></db:parameterized-query>
+                </db:select>
+                <logger message="Processed by second message Processor" level="INFO" doc:name="Logger"/>
+            </processor-chain>
+        </first-successful>
+        <object-to-string-transformer doc:name="Object to String"/>
     </flow>
     <flow name="get:/list:application-config">
         <db:select config-ref="MySQL_Configuration" doc:name="Database">
